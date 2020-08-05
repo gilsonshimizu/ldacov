@@ -1,0 +1,28 @@
+Package: ldacov
+Title: LDA with covariates
+Version: 1.0.0.0
+Authors@R: 
+    person(given = "Gilson",
+           family = "Shimizu",
+           role = c("aut", "cre"),
+           email = "gilsonshimizu@yahoo.com.br",
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+    person(given = "Denis",
+           family = "Valle",
+           role = c("aut", "cre"),
+           email = "drvalle@ufl.edu",
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+Description: Generates samples of the parameters of interest of the LDA model with covariates.
+License: `GPL-2
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
+LinkingTo: 
+    Rcpp,
+    RcppArmadillo
+Imports: 
+    Rcpp,
+    RcppArmadillo
+Depends: 
+    R (>= 2.10)
