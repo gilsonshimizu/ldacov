@@ -47,12 +47,12 @@ library(ldacov)
 data("sim_data")
 
 #Model without covariates
-res=LDA.abundance(y=sim_data$y,
-                 ncomm=4,
-                 ngibbs=1000,
-                 nburn=500,
-                 psi=0.01,
-                 gamma=0.1)
+res=gibbs.LDA(y=sim_data$y,
+             ncomm=4,#Number of clusters found previously
+             ngibbs=1000,
+             nburn=500,
+             psi=0.01,
+             gamma=0.1)
 
 plot(res$llk,type='l')
 

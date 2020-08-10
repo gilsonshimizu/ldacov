@@ -10,7 +10,7 @@
 #'@param gamma Numeric. Positive real number corresponding to the hyper parameter of the prior of \eqn{V}.
 #'@export
 
-LDA.abundance=function(y,ncomm,ngibbs,nburn,psi,gamma){
+gibbs.LDA=function(y,ncomm,ngibbs,nburn,psi,gamma){
   #get data
   nspp=ncol(y)
   nloc=nrow(y)
