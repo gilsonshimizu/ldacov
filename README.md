@@ -2,11 +2,11 @@
 ldacov is an R package to estimate an LDA model with covariates using MCMC algorithms.
 ## Installation
 Use the devtools package to install ldacov directly from github.
-```{r}
+```
 install_github("gilsonshimizu/ldacov")
 ```
 ## Usage
-```{r}
+```
 library(ldacov)
 #Loads simulated data set
 data("sim_data")
