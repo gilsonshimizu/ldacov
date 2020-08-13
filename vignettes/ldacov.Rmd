@@ -1,0 +1,190 @@
+---
+title: "ldacov - A new LDA formulation with covariates"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ldacov - A new LDA formulation with covariates}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: ref.bib
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+<style>
+body {
+text-align: justify}
+</style>
+
+
+ldacov (@shimizu2020ldacov) is an R package to estimate an LDA model with covariates using MCMC algorithms.
+The model implemented in this package considers the quantity of elements in each cluster as a response variable. The logarithmic link function allows easy interpretation of the regression coefficients.
+
+## Installation
+Use the devtools package to install ldacov directly from github.
+```
+install_github("gilsonshimizu/ldacov")
+```
+## Datasets
+
+To run an LDA model with covariates we need a counting matrix $y$ with dimension $l\times s$ ($l$ experimental units and $s$ categories). In text analysis, this matrix is known as bag of words.
+
+We also need an matrix $X$ of dimension $l \times d$ with the covariate values for each experimental unit.
+
+## Optimal number of clusters
+
+The optimal number of clusters can be found using the model without covariates that uses the TSB (truncated stick-breaking) prior proposed by @albuquerque2019bayesian. This model can be used through the function `gibbs.LDA`.
+
+## Estimation
+The estimation of the parameters of interest are made through the function `gibbs.LDA.cov`. This function generates a chain of the parameters of interest $\Phi$ and $\Theta$ as well as the regression coefficients.
+
+## Analysis
+The main goals in this model are: verify which covariates explain the quantities in each cluster, understand the category distributions in each cluster (matrix $\Phi$) and understand the distribution of the clusters within each experimental unit (matrix $\Theta$). We illustrate these analyzes in the following example.
+
+## Example
+
+### Load package
+```{r setup}
+library(ldacov)
+```
+
+
+### Load simulated dataset
+```{r}
+data("sim_data")
+```
+
+### Find optimal number of clusters
+
+```{r echo=T, results='hide'}
+res=gibbs.LDA(y=sim_data$y,
+             ncomm=10,
+             ngibbs=1000,
+             nburn=500,
+             psi=0.01,
+             gamma=0.1)
+```
+
+
+```{r}
+array.lsk.init=res$array.lsk
+nlk=apply(array.lsk.init,c(1,3),sum)
+theta=nlk/apply(nlk,1,sum)
+cumsum(colSums(theta,na.rm=TRUE)/nrow(sim_data$y))
+```
+
+As expected, 4 clusters represent more than 99% of the elements. So 4 clusters are sufficient.
+
+### Generate $\Phi$ sample using the model without covariates
+```{r echo=T, results='hide'}
+res=gibbs.LDA(y=sim_data$y,
+             ncomm=4,#Number of clusters found previously
+             ngibbs=1000,
+             nburn=500,
+             psi=0.01,
+             gamma=0.1)
+
+```
+
+
+
+
+### Run model with covariates
+
+```{r echo=T, results='hide'}
+res.cov=gibbs.LDA.cov(ncomm=4,
+                     ngibbs=1000,
+                     nburn=500,
+                     y=sim_data$y,
+                     xmat=sim_data$xmat,
+                     phi.prior=0.01,
+                     array.lsk.init=res$array.lsk,
+                     var.betas=c(10,rep(10,ncol(sim_data$xmat)-1)),
+                     phi.init=res$phi)
+```
+
+### Check convergence
+
+```{r fig.width=7,fig.height=7}
+plot(res.cov$llk,type='l',xlab="iterations",ylab='log-likelihood')
+```
+
+### View the estimated $\Theta$ and $\Phi$ matrices
+```{r}
+library(ggplot2)
+seq=seq(from=500,to=1000,by=1)
+res.theta=matrix(colMeans(res.cov$nlk[seq,]),nrow=nrow(sim_data$y),ncol=4)/rowSums(matrix(colMeans(res.cov$nlk[seq,]),nrow=nrow(sim_data$y),ncol=4))
+
+data <- expand.grid(X=1:nrow(sim_data$y), Y=1:4)
+data$Z <- as.vector(res.theta)
+
+```
+
+```{r  fig.width=7,fig.height=7}
+ggplot(data, aes(X, Y, fill= Z)) + geom_tile() + 
+  scale_fill_gradient(low="green", high="darkblue",na.value="green") +
+  labs(x = "Sample units") + labs(y = "Cluster distribution (%)") +
+  labs(fill = " ")+theme_minimal() +
+  ggtitle("Estimated Theta matrix") 
+```
+```{r}
+res.phi=matrix(colMeans(res.cov$phi[seq,]),nrow=4,ncol=ncol(sim_data$y))
+data <- expand.grid(X=1:ncol(sim_data$y), Y=1:4)
+data$Z <- as.vector(res.phi)
+```
+```{r fig.width=7,fig.height=7}
+ggplot(data, aes(X, Y, fill= Z)) + geom_tile() + 
+  scale_fill_gradient(low="green", high="darkblue",na.value="green") +
+  labs(x = "Category distribution (%)") + labs(y = "Cluster") +
+  labs(fill = " ")+theme_minimal()+
+  ggtitle("Estimated Phi matrix") 
+```
+
+```{r}
+res.phi=matrix(colMeans(res.cov$phi[seq,]),nrow=4,ncol=ncol(sim_data$y))
+res.phi.max=matrix(NA,nrow=4,ncol=ncol(sim_data$y))
+for (i in 1:4){res.phi.max[i,]=apply(res.phi[-i,], 2, max)}
+colnames(res.phi.max)=1:ncol(sim_data$y)
+topic_word_max=apply(res.phi/res.phi.max, 1, function(x) names(sort(x,decreasing=TRUE)))
+colnames(topic_word_max)=c("Cluster 1","Cluster 2","Cluster 3","Cluster 4")
+```
+
+Especially if you are working with text. It may be interesting to know the main cluster categories (or main words for each topic).
+
+```{r echo = FALSE, results = 'asis'}
+library(knitr)
+kable(topic_word_max[1:10, ])
+```
+
+
+### Regression coefficient distributions
+
+```{r}
+library(reshape2)
+library(ggridges)
+
+number=1:length(seq)
+aux1=data.frame(number,res.cov$betas[seq,])
+aux2=melt(aux1, id=c("number"))
+aux2$variable=(gsub("X", "", aux2$variable))
+
+```
+```{r fig.width=7,fig.height=7}
+ggplot(aux2, aes(x = value, y = variable, fill = variable)) +
+  geom_density_ridges(size=0.4) +
+  theme_ridges() + 
+  theme(legend.position = "none") +
+  xlab("Value") +
+  ylab("Betas") +
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.title.x=element_blank())
+```
+
+
+
+## References
