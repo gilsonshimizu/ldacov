@@ -30,7 +30,8 @@ res.cov=gibbs.LDA.cov(ncomm=4,
                      phi.prior=0.01,
                      array.lsk.init=res$array.lsk,
                      var.betas=c(10,rep(10,ncol(sim_data$xmat)-1)),
-                     phi.init=res$phi)
+                     phi.init=res$phi,
+                     estimate.phi=FALSE)
 
 plot(res.cov$llk,type='l')
 ```
