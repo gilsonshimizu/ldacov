@@ -63,11 +63,12 @@ lda_no_covariates=gibbs.LDA(y=sim_data$y,
 ```
 
 
-```{r}
+```{r fig.width=7,fig.height=7}
 array.lsk.init=lda_no_covariates$array.lsk
 nlk=apply(array.lsk.init,c(1,3),sum)
 theta=nlk/apply(nlk,1,sum)
-cumsum(colSums(theta,na.rm=TRUE)/nrow(sim_data$y))
+plot(cumsum(colSums(theta,na.rm=TRUE)/nrow(sim_data$y)),type='l',
+     xlab="Number of clusters", ylab="% of elements")
 ```
 
 On this dataset,
