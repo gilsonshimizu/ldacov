@@ -11,6 +11,7 @@
 #'@param array.lsk.init Array with initial values of the quantity of elements in each sample unit, category and cluster. Previously estimated in the model without covariates.
 #'@param var.betas Vector. Positive real vector corresponding to the diagonal of the hyper parameter \eqn{T} of the prior of \eqn{\beta}.
 #'@param phi.init Sample of the matrix \eqn{\Phi} previously generated with the model without covariates.
+#'@param estimate.phi Logical. If FALSE \eqn{\Phi} will not be estimated. The matrix containing the posterior sample (\code{phi.init}) of the model without covariates will be used. If TRUE \eqn{\Phi} will be estimated. The matrix containing the posterior sample (\code{phi.init}) of the model without covariates will be used only to initialize the model.
 #'@export
 #'@return Returns a list containing samples of the parameters of interest (\code{phi}, \code{nlk} and \code{betas}) and a vector with the log likelihood (\code{llk}).
 #'@examples
@@ -37,20 +38,50 @@
 #'                      phi.prior=0.01,
 #'                      array.lsk.init=res$array.lsk,
 #'                      var.betas=c(10,rep(10,ncol(sim_data$xmat)-1)),
-#'                      phi.init=res$phi)
+#'                      phi.init=res$phi,
+#'                      estimate.phi=FALSE)
 #'
 #'plot(res.cov$llk,type='l')
 
 gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
-                       var.betas,phi.init){
+                       var.betas,phi.init,estimate.phi){
   #basic settings
   nparam=ncol(xmat)
   nloc=nrow(y)
   nspp=ncol(y)
   ntot=apply(y,1,sum)
 
+  #get phi by eliminating superfluous groups
+  ncomm.init=ncol(phi.init)/nspp
+  tmp=matrix(1:(ncomm.init*nspp),ncomm.init,nspp)
+  seq1=1:ncomm
+  ind1=tmp[-seq1,] #indicators for superfluous groups
+  phi.mat=phi.init[,-ind1]
+  phi.nrow=nrow(phi.mat)
+  if (!estimate.phi) phi=matrix(phi.mat[1,],ncomm,nspp)
+  if (estimate.phi)  phi=matrix(phi.mat[phi.nrow,],ncomm,nspp)
+
+  #get theta
+  nlk=apply(array.lsk.init,c(1,3),sum)
+  theta1=nlk/apply(nlk,1,sum)
+
+  #re-distribute individuals within array.lsk.init that are in eliminated communities
+  seq1=1:ncomm
+  array.lsk=array.lsk.init[,,seq1]
+  for (i in 1:nloc){
+    for (j in 1:nspp){
+      tmp=array.lsk.init[i,j,-seq1]
+      n=sum(tmp)
+      if (n>0){
+        prob=theta1[i,seq1]*phi[seq1,j]
+        prob=prob/sum(prob)
+        z=rmultinom(1,size=n,prob=prob)
+        array.lsk[i,j,]=array.lsk[i,j,]+z
+      }
+    }
+  }
+
   #initial values
-  array.lsk=array.lsk.init
   nlk=apply(array.lsk,c(1,3),sum)
   betas=matrix(0,nparam,ncomm)
   options(warn=-1) #sometimes I get "glm.fit: fitted rates numerically 0 occurred" here
@@ -71,8 +102,6 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
   nks=t(apply(array.lsk,2:3,sum))
   nk=rowSums(nks)
   # phi=nks/apply(nks,1,sum); apply(phi,1,sum)
-  phi=matrix(phi.init[1,],ncomm,nspp)
-  phi.nrow=nrow(phi.init)
   NBN=10
 
   #to store outcomes from gibbs sampler
@@ -107,9 +136,11 @@ gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
                       LoThresh=LoThresh)
 
     #sample phi
-    oo=sample(phi.nrow,size=1)
-    phi=matrix(phi.init[oo,],ncomm,nspp)
-    # phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
+    if (estimate.phi)  phi=rdirichlet1(alpha=nks+phi.prior,ncomm=ncomm,nspp=nspp)
+    if (!estimate.phi){
+      oo=sample(phi.nrow,size=1)
+      phi=matrix(phi.mat[oo,],ncomm,nspp)
+    }
     # phi=phi.true
 
     #sample z

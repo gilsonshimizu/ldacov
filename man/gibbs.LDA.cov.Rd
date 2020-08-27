@@ -13,7 +13,8 @@ gibbs.LDA.cov(
   phi.prior,
   array.lsk.init,
   var.betas,
-  phi.init
+  phi.init,
+  estimate.phi
 )
 }
 \arguments{
@@ -34,6 +35,8 @@ gibbs.LDA.cov(
 \item{var.betas}{Vector. Positive real vector corresponding to the diagonal of the hyper parameter \eqn{T} of the prior of \eqn{\beta}.}
 
 \item{phi.init}{Sample of the matrix \eqn{\Phi} previously generated with the model without covariates.}
+
+\item{estimate.phi}{Logical. If FALSE \eqn{\Phi} will not be estimated. The matrix containing the posterior sample (\code{phi.init}) of the model without covariates will be used. If TRUE \eqn{\Phi} will be estimated. The matrix containing the posterior sample (\code{phi.init}) of the model without covariates will be used only to initialize the model.}
 }
 \value{
 Returns a list containing samples of the parameters of interest (\code{phi}, \code{nlk} and \code{betas}) and a vector with the log likelihood (\code{llk}).
@@ -65,7 +68,8 @@ res.cov=gibbs.LDA.cov(ncomm=4,
                      phi.prior=0.01,
                      array.lsk.init=res$array.lsk,
                      var.betas=c(10,rep(10,ncol(sim_data$xmat)-1)),
-                     phi.init=res$phi)
+                     phi.init=res$phi,
+                     estimate.phi=FALSE)
 
 plot(res.cov$llk,type='l')
 }

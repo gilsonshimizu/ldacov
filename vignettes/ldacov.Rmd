@@ -54,17 +54,17 @@ We start by finding the optimal number of clusters. Although this quantity could
 
 
 ```{r echo=T, results='hide'}
-res=gibbs.LDA(y=sim_data$y,
-              ncomm=10,
-              ngibbs=1000,
-              nburn=500,
-              psi=0.01,
-              gamma=0.1)
+lda_no_covariates=gibbs.LDA(y=sim_data$y,
+                            ncomm=10,
+                            ngibbs=1000,
+                            nburn=500,
+                            psi=0.01,
+                            gamma=0.1)
 ```
 
 
 ```{r}
-array.lsk.init=res$array.lsk
+array.lsk.init=lda_no_covariates$array.lsk
 nlk=apply(array.lsk.init,c(1,3),sum)
 theta=nlk/apply(nlk,1,sum)
 cumsum(colSums(theta,na.rm=TRUE)/nrow(sim_data$y))
@@ -76,21 +76,7 @@ On this dataset,
 ## Estimation
 Once the number of clusters has been defined,
 the estimation of the parameters of ldacov are made through the function `gibbs.LDA.cov`. This function generates a chain of the parameters  $\Phi$ and $\Theta$, as well as the regression coefficients.
-`gibbs.LDA.cov` requires an estimate of the matrix $\Phi$. We obtain this quantity by refitting the LDA model with no covariates using 4 clusters:
-
-### Generate $\Phi$ sample using the model without covariates
-
-```{r echo=T, results='hide'}
-lda_no_covariates <- gibbs.LDA(y=sim_data$y,
-                               ncomm=4,#Number of clusters found previously
-                               ngibbs=1000,
-                               nburn=500,
-                               psi=0.01,
-                               gamma=0.1)
-```
-
-We can now fit the LDA model with covariates:
-
+If `estimate.phi=FALSE` then $\Phi$ will not be estimated and the matrix containing the posterior sample (`phi.init`) of the model without covariates will be used. If `estimate.phi=TRUE` $\Phi$ will be estimated and the matrix containing the posterior sample (`phi.init`) of the model without covariates will be used only to initialize the model.
 
 ```{r echo=T, results='hide'}
 lda_with_covariates <- gibbs.LDA.cov(ncomm=4,
@@ -101,7 +87,8 @@ lda_with_covariates <- gibbs.LDA.cov(ncomm=4,
                                      phi.prior=0.01,
                                      array.lsk.init=lda_no_covariates$array.lsk,
                                      var.betas=c(10,rep(10,ncol(sim_data$xmat)-1)),
-                                     phi.init=lda_no_covariates$phi)
+                                     phi.init=lda_no_covariates$phi,
+                                     estimate.phi=FALSE)
 ```
 
 The convergence of the model can be checked using
