@@ -23,7 +23,8 @@ LinkingTo:
     RcppArmadillo
 Imports: 
     Rcpp,
-    RcppArmadillo
+    RcppArmadillo,
+    MASS
 Depends: 
     R (>= 2.10)
 Suggests: 

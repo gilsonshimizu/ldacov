@@ -63,7 +63,7 @@ lda_no_covariates=gibbs.LDA(y=sim_data$y,
 ```
 
 
-```{r fig.width=7,fig.height=7}
+```{r fig.width=5,fig.height=5,fig.align = "center"}
 array.lsk.init=lda_no_covariates$array.lsk
 nlk=apply(array.lsk.init,c(1,3),sum)
 theta=nlk/apply(nlk,1,sum)
@@ -80,6 +80,7 @@ the estimation of the parameters of ldacov are made through the function `gibbs.
 If `estimate.phi=FALSE` then $\Phi$ will not be estimated and the matrix containing the posterior sample (`phi.init`) of the model without covariates will be used. If `estimate.phi=TRUE` $\Phi$ will be estimated and the matrix containing the posterior sample (`phi.init`) of the model without covariates will be used only to initialize the model.
 
 ```{r echo=T, results='hide'}
+
 lda_with_covariates <- gibbs.LDA.cov(ncomm=4,
                                      ngibbs=1000,
                                      nburn=500,
@@ -94,7 +95,7 @@ lda_with_covariates <- gibbs.LDA.cov(ncomm=4,
 
 The convergence of the model can be checked using
 
-```{r fig.width=7,fig.height=7}
+```{r fig.width=5,fig.height=5,fig.align = "center"}
 plot(lda_with_covariates$llk,type='l',xlab="iterations",ylab='log-likelihood')
 ```
 
@@ -112,7 +113,7 @@ data <- expand.grid(X=1:nrow(sim_data$y), Y=1:4)
 data$Z <- as.vector(lda_with_covariates.theta)
 ```
 
-```{r  fig.width=7,fig.height=7}
+```{r  fig.width=5,fig.height=5,fig.align = "center"}
 ggplot(data, aes(X, Y, fill= Z)) + geom_tile() + 
   scale_fill_gradient(low="green", high="darkblue",na.value="green") +
   labs(x = "Sample units") + labs(y = "Cluster distribution (%)") +
@@ -124,7 +125,7 @@ lda_with_covariates.phi <- matrix(colMeans(lda_with_covariates$phi[seq,]),nrow=4
 data <- expand.grid(X=1:ncol(sim_data$y), Y=1:4)
 data$Z <- as.vector(lda_with_covariates.phi)
 ```
-```{r fig.width=7,fig.height=7}
+```{r fig.width=5,fig.height=5,fig.align = "center"}
 ggplot(data, aes(X, Y, fill= Z)) + geom_tile() + 
   scale_fill_gradient(low="green", high="darkblue",na.value="green") +
   labs(x = "Category distribution (%)") + labs(y = "Cluster") +
@@ -163,7 +164,7 @@ aux1 <- data.frame(number,lda_with_covariates$betas[seq,])
 aux2 <- melt(aux1, id=c("number"))
 aux2$variable <- (gsub("X", "", aux2$variable))
 ```
-```{r fig.width=7,fig.height=7}
+```{r fig.width=5,fig.height=5,fig.align = "center"}
 ggplot(aux2, aes(x = value, y = variable, fill = variable)) +
   geom_density_ridges(size=0.4) +
   theme_ridges() + 
