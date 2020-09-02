@@ -43,7 +43,7 @@
 #'
 #'plot(res.cov$llk,type='l')
 
-gibbs.LDA.cov=function(ncomm,ngibbs,nburn,y,xmat,phi.prior,array.lsk.init,
+gibbs.LDA.cov=function(ncomm,ngibbs,y,xmat,phi.prior,array.lsk.init,
                        var.betas,phi.init,estimate.phi){
   #basic settings
   nparam=ncol(xmat)

@@ -36,10 +36,14 @@ NumericVector DoublingBetas(NumericVector LogMediaMiss, double yslice, double w,
   double yhi=LogTargetBetas(LogMediaMiss,ParamHi,y,xmat,target,var1,NBN,LgammaNBN);
 
   int oo=0;
+  int problem=0;
   while((ylo>yslice) & (oo<MaxIter)){
     ParamLo[target]=ParamLo[target]-w;
     ylo=LogTargetBetas(LogMediaMiss,ParamLo,y,xmat,target,var1,NBN,LgammaNBN);
     oo=oo+1;
+  }
+  if (oo >= MaxIter){
+    problem=1;
   }
   oo=0;
   while((yhi>yslice) & (oo<MaxIter)){
@@ -47,9 +51,17 @@ NumericVector DoublingBetas(NumericVector LogMediaMiss, double yslice, double w,
     yhi=LogTargetBetas(LogMediaMiss,ParamHi,y,xmat,target,var1,NBN,LgammaNBN);
     oo=oo+1;
   }
+  if (oo >= MaxIter){
+    problem=1;
+  }
+  
   NumericVector res(2);
   res[0]=ParamLo[target];
   res[1]=ParamHi[target];
+  if (problem==1){
+    res[0]=param[target];
+    res[1]=param[target];
+  }
   return res;
 }
 
@@ -58,6 +70,7 @@ NumericVector DoublingBetas(NumericVector LogMediaMiss, double yslice, double w,
 double SampleEachParamBetas(NumericVector LogMediaMiss,NumericVector rango1,double yslice,NumericVector param,
                             NumericVector y,NumericMatrix xmat,int target,NumericVector var1,
                             double NBN,int MaxIter, double LoThresh) {
+  NumericVector param_orig1=clone(param);
   double yfim=R_NegInf;
   double x=0;
   double DistLo;
@@ -77,6 +90,9 @@ double SampleEachParamBetas(NumericVector LogMediaMiss,NumericVector rango1,doub
       diff1=rango1[1]-rango1[0];
     }
     oo=oo+1;
+  }
+  if ((diff1 <= LoThresh) | (oo >= MaxIter)){
+    x=param_orig1[target];
   }
   return x;
 }

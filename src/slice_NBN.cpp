@@ -36,6 +36,7 @@ NumericVector DoublingNBN(double yslice, double w, NumericMatrix y, double NBN,N
   double ylo=LogTargetNBN(Media,y,ParamLo);
   double yhi=LogTargetNBN(Media,y,ParamHi);
 
+  int problem=0;
   int oo=0;
   while((ylo>yslice) & (ParamLo>0) & (oo<MaxIter)){
     ParamLo=ParamLo-w;
@@ -43,15 +44,27 @@ NumericVector DoublingNBN(double yslice, double w, NumericMatrix y, double NBN,N
     ylo=LogTargetNBN(Media,y,ParamLo);
     oo=oo+1;
   }
+  if (oo >= MaxIter){
+    problem=1;
+  }
+  
   oo=0;
   while((yhi>yslice) & (ParamHi<1000) & (oo<MaxIter)){
     ParamHi=ParamHi+w;
     yhi=LogTargetNBN(Media,y,ParamHi);
     oo=oo+1;
   }
+  if (oo >= MaxIter){
+    problem=1;
+  }
+  
   NumericVector res(2);
   res[0]=ParamLo;
   res[1]=ParamHi;
+  if (problem==1){
+    res[0]=NBN;
+    res[1]=NBN;
+  }
   return res;
 }
 
@@ -77,6 +90,10 @@ double ShrinkAndSample(NumericMatrix Media,NumericVector rango1,double yslice,Nu
     }
     oo=oo+1;
   }
+  if ((diff1 <= LoThresh) | (oo >= MaxIter)){
+    x=NBN;
+  }
+  
   return x;
 }
 

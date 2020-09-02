@@ -7,7 +7,6 @@
 gibbs.LDA.cov(
   ncomm,
   ngibbs,
-  nburn,
   y,
   xmat,
   phi.prior,
@@ -22,8 +21,6 @@ gibbs.LDA.cov(
 
 \item{ngibbs}{Integer. Total sample size}
 
-\item{nburn}{Integer. Beginning of the sample to be thrown away}
-
 \item{y}{Matrix \eqn{L x S} with the quantities of each category in each sample unit. In text analysis we call this matrix bag of words.}
 
 \item{xmat}{Matrix \eqn{L x D} with covariates for each sample unit.}
@@ -37,6 +34,8 @@ gibbs.LDA.cov(
 \item{phi.init}{Sample of the matrix \eqn{\Phi} previously generated with the model without covariates.}
 
 \item{estimate.phi}{Logical. If FALSE \eqn{\Phi} will not be estimated. The matrix containing the posterior sample (\code{phi.init}) of the model without covariates will be used. If TRUE \eqn{\Phi} will be estimated. The matrix containing the posterior sample (\code{phi.init}) of the model without covariates will be used only to initialize the model.}
+
+\item{nburn}{Integer. Beginning of the sample to be thrown away}
 }
 \value{
 Returns a list containing samples of the parameters of interest (\code{phi}, \code{nlk} and \code{betas}) and a vector with the log likelihood (\code{llk}).
