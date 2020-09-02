@@ -1,8 +1,8 @@
 ---
-title: "ldacov - A new LDA formulation with covariates"
+title: "ldacov - A new Latent Dirichlet Allocation (LDA) formulation with covariates"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{ldacov - A new LDA formulation with covariates}
+  %\VignetteIndexEntry{ldacov - A new Latent Dirichlet Allocation (LDA) formulation with covariates}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 bibliography: ref.bib
@@ -20,8 +20,8 @@ text-align: justify}
 </style>
 
 
-ldacov (@shimizu2020ldacov) is an R package that estimates an LDA model with covariates using MCMC algorithms.
-The model implemented in this package uses the number of elements in each cluster as the response variable. The logarithmic link function allows an easy interpretation of the regression coefficients that link covariates to the response.
+ldacov (@shimizu2020ldacov) is an R package that estimates the Latent Dirichlet Allocation (LDA) model with covariates using an MCMC algorithm. The model implemented in this package uses the number of elements in each cluster as the response variable. The logarithmic link function used to relate covariates to the response variable allows an easy interpretation of the regression coefficients.
+
 
 
 ## Installation
@@ -37,12 +37,7 @@ library(ldacov)
 
 ## Datasets
 
-To run an LDA model with covariates, we need a counting matrix $y$ with dimension $l\times s$ ($l$ is the number of experimental units, and $s$ the number of categories). In text analysis, for instance, 
-$y$ is the bag-of-words matrix, where $l$ is the number of text documents and $s$ is the number of tokens (words).
-
-We also need an matrix $X$ of dimension $l \times d$ with the values for each of the $d$ covariates for each experimental unit.
-
-Here we use a simulated dataset which contains both matrices $y$ and $X$:
+To run the LDA model with covariates, we need a counting matrix $y$ with dimension $l\times s$ ($l$ is the number of units, and $s$ the number of categories). In text analysis, for instance, $y$ is the bag-of-words matrix, where $l$ is the number of text documents and $s$ is the number of tokens (words). In Ecology, often $l$ is the number of field plots and $s$ is the number of species. We also need an matrix $X$ of dimension $l \times (d+1)$ with a column of 1's for the intercept and the values for each of the $d$ covariates. Here we use a simulated data set which contains both matrices $y$ and $X$:
 
 ```{r}
 data("sim_data")
@@ -50,10 +45,18 @@ data("sim_data")
 
 ## Optimal number of clusters
 
-We start by finding the optimal number of clusters. Although this quantity could be chosen *a priori*, here  we use an LDA model without covariates that uses the TSB (truncated stick-breaking) prior (@albuquerque2019bayesian). This model is implemented using the function `gibbs.LDA`.
+We start by finding the optimal number of clusters. Although this quantity could be chosen *a priori*, here we use an LDA model without covariates that relies on a truncated stick-breaking (TSB) prior to identify the number of clusters (@albuquerque2019bayesian). This model is implemented using the function `gibbs.LDA`. The arguments required for this function are:
+
+* `y`:  counting matrix containing the data (rows are units and columns are categories); 
+* `ncomm`:  maximum number of clusters;
+* `ngibbs`:  number of iterations for the Gibbs sampler;
+* `nburn`:  number of iterations to be discarded as burn-in;
+* `psi`: parameter for the prior Dirichlet distribution used for $\phi_k$ (the vector of probabilities that characterizes each cluster); and
+* `gamma`: parameter for the TSB prior used for $\theta_l$ (the vector of probabilities that characterizes each unit).
 
 
 ```{r echo=T, results='hide'}
+set.seed(1)
 lda_no_covariates=gibbs.LDA(y=sim_data$y,
                             ncomm=10,
                             ngibbs=1000,
@@ -62,22 +65,49 @@ lda_no_covariates=gibbs.LDA(y=sim_data$y,
                             gamma=0.1)
 ```
 
+This function outputs a list which contains the following elements:
+
+* `llk`:  posterior samples for the log-likelihood;  
+* `theta`:  posterior samples for the $\Theta$ matrix containing the proportion of each cluster in each unit;
+* `phi`:  posterior samples for the $\Phi$ matrix containing the proportion of each category within each cluster; and
+* `vmat`:  posterior samples for the $V$ matrix in the stick-breaking formulation, which is then used to derive the $\Theta$ matrix; and
+* `array.lsk`: the last posterior sample for an array with the number of individuals in each unit, category, and cluster.
+
+We first assess convergence by inspecting the trace-plot of the log-likelihood. This plot suggests that the algorithm has converged after discarding the first 500 iterations:
+
+```{r fig.width=5,fig.height=5,fig.align = "center"}
+plot(lda_no_covariates$llk,type='l',xlab='Iterations',ylab='Log-likelihood')
+```
+
+We used `array.lsk` to determine the optimal number of clusters (`theta` could have been used as well). On this dataset, the LDA model with the TSB prior seems to have identified 4 main  cluster as these clusters contain more than 99% of the elements. Thus, we choose to use 4 clusters for the subsequent analysis.
 
 ```{r fig.width=5,fig.height=5,fig.align = "center"}
 array.lsk.init=lda_no_covariates$array.lsk
 nlk=apply(array.lsk.init,c(1,3),sum)
 theta=nlk/apply(nlk,1,sum)
-plot(cumsum(colSums(theta,na.rm=TRUE)/nrow(sim_data$y)),type='l',
-     xlab="Number of clusters", ylab="% of elements")
+colnames(theta)=paste0('Cluster',1:10)
+rownames(theta)=paste0('Unit',1:nrow(sim_data$y))
+head(round(theta,2))
+
+boxplot(theta,ylab=expression(theta),xlab='Clusters',ylim=c(0,1))
+
+cumsum1=cumsum(colSums(theta,na.rm=TRUE)/nrow(sim_data$y))
+cumsum1[1:4]
 ```
 
-On this dataset,
-4 clusters contain more than 99% of the elements. Thus, we choose to use 4 clusters in the following analysis.
-
 ## Estimation
-Once the number of clusters has been defined,
-the estimation of the parameters of ldacov are made through the function `gibbs.LDA.cov`. This function generates a chain of the parameters  $\Phi$ and $\Theta$, as well as the regression coefficients.
-If `estimate.phi=FALSE` then $\Phi$ will not be estimated and the matrix containing the posterior sample (`phi.init`) of the model without covariates will be used. If `estimate.phi=TRUE` $\Phi$ will be estimated and the matrix containing the posterior sample (`phi.init`) of the model without covariates will be used only to initialize the model.
+Once the number of clusters has been defined, the estimation of the parameters of ldacov are made through the function `gibbs.LDA.cov`. The arguments required by this function are:
+
+* `ncomm`:  number of clusters;
+* `ngibbs`:  number of iterations for the Gibbs sampler;
+* `nburn`:  number of iterations to be discarded as burn-in;
+* `y`:  counting matrix containing the data (rows are units and columns are categories); 
+* `xmat`: matrix containing covariate information (rows are units and each column contains a different covariate). Notice that the first column of this matrix should be comprised of 1's if the regression model is to have an intercept;  
+* `phi.prior`: parameter to be used in the Dirichlet prior for $\Phi$ if this matrix is estimated;
+* `array.lsk.init`: initial values for the `array.lsk` array; 
+* `var.betas`: variance parameters for the normal distribution priors for the regression coefficients;
+* `phi.init`: posterior samples from the $\Phi$ matrix estimated by "gibbs.lda". If `estimate.phi` is TRUE, then these posterior samples are used simply to initialize the $\Phi$ matrix. If `estimate.phi` is FALSE, then these posterior samples are used instead of attempting to re-estimate the $\Phi$ matrix; and
+* `estimate.phi`: if $\Phi$ matrix is supposed to be estimated (TRUE or FALSE).
 
 ```{r echo=T, results='hide'}
 
@@ -88,79 +118,115 @@ lda_with_covariates <- gibbs.LDA.cov(ncomm=4,
                                      xmat=sim_data$xmat,
                                      phi.prior=0.01,
                                      array.lsk.init=lda_no_covariates$array.lsk,
-                                     var.betas=c(10,rep(10,ncol(sim_data$xmat)-1)),
+                                     var.betas=rep(100,ncol(sim_data$xmat)),
                                      phi.init=lda_no_covariates$phi,
                                      estimate.phi=FALSE)
 ```
 
-The convergence of the model can be checked using
+This function outputs a list which contains the following elements:
+
+* `llk`:  posterior samples for the log-likelihood;  
+* `phi`:  if `estimate.phi`=TRUE, then this consists of posterior samples for the $\Phi$ matrix containing the proportion of each category within each cluster. If `estimate.phi`=FALSE, then this just outputs random samples from lda_no_covariates$phi; 
+* `nlk`:  posterior samples for the $n_{lk}$ matrix containing the number of elements in each unit $l$ and cluster $k$;
+* `betas`: posterior samples for the regression parameters for each cluster $k$; * `fmodel`: posterior samples of the log-likelihood plus the log priors; and
+* `NBN`: posterior samples for the dispersion parameter $N$ from the negative-binomial regression.
+
+One way to assess convergence consists of inspecting the trace-plot of the log-likelihood. This plot suggests that the algorithm has converged after discarding the first 100 iterations:
 
 ```{r fig.width=5,fig.height=5,fig.align = "center"}
 plot(lda_with_covariates$llk,type='l',xlab="iterations",ylab='log-likelihood')
 ```
 
+Typically, the main goals of the ldacov  model are: 
 
+(i) to verify which covariates explain the quantities in each cluster, 
 
-Typically, the main goals of the ldacov  model are: (i) to verify which covariates explain the quantities in each cluster, (ii) to understand the category distributions in each cluster (matrix $\Phi$), (iii) and understand the distribution of the clusters within each experimental unit (matrix $\Theta$). 
+(ii) to understand the category distributions in each cluster (matrix $\Phi$), 
 
-We can see  the estimated matrices $\Theta$ and $\Phi$ using
+(iii) and understand the distribution of the clusters within each unit (matrix $\Theta$). 
+
+We start by examining $\Theta$. We obtain the posterior mean for this matrix in the following way:
+
 ```{r}
-library(ggplot2)
-seq=seq(from=500,to=1000,by=1)
-lda_with_covariates.theta <- matrix(colMeans(lda_with_covariates$nlk[seq,]),nrow=nrow(sim_data$y),ncol=4)/rowSums(matrix(colMeans(lda_with_covariates$nlk[seq,]),nrow=nrow(sim_data$y),ncol=4))
-
-data <- expand.grid(X=1:nrow(sim_data$y), Y=1:4)
-data$Z <- as.vector(lda_with_covariates.theta)
+seq1=100:1000
+tmp=matrix(colMeans(lda_with_covariates$nlk[seq1,]),nrow=nrow(sim_data$y),ncol=4)
+theta <- tmp/rowSums(tmp)
+colnames(theta)=paste0('Cluster',1:4)
+rownames(theta)=paste0('Units',1:nrow(sim_data$y))
+head(round(theta,2))
 ```
 
+We then plot this matrix:
+
 ```{r  fig.width=5,fig.height=5,fig.align = "center"}
-ggplot(data, aes(X, Y, fill= Z)) + geom_tile() + 
+data <- expand.grid(X=1:nrow(sim_data$y), Y=1:4)
+data$proportion <- as.vector(theta)
+
+library(ggplot2)
+ggplot(data, aes(X, Y, fill= proportion)) + geom_tile() + 
   scale_fill_gradient(low="green", high="darkblue",na.value="green") +
-  labs(x = "Sample units") + labs(y = "Cluster distribution (%)") +
+  labs(x = "Units") + labs(y = "Cluster distribution") +
   labs(fill = " ")+theme_minimal() +
   ggtitle("Estimated Theta matrix") 
 ```
+
+Similarly, we can also examine the $\Phi$ matrix. We calculate the posterior mean in the following way:
+
+
 ```{r}
-lda_with_covariates.phi <- matrix(colMeans(lda_with_covariates$phi[seq,]),nrow=4,ncol=ncol(sim_data$y))
-data <- expand.grid(X=1:ncol(sim_data$y), Y=1:4)
-data$Z <- as.vector(lda_with_covariates.phi)
+phi <- matrix(colMeans(lda_with_covariates$phi[seq1,]),nrow=4,ncol=ncol(sim_data$y))
+rownames(phi)=paste0('Cluster',1:4)
+colnames(phi)=paste0('Category',1:ncol(sim_data$y))
+head(round(phi[,1:10],2))
 ```
+
+We can visualize the $\Phi$ matrix using the code below:
+
 ```{r fig.width=5,fig.height=5,fig.align = "center"}
-ggplot(data, aes(X, Y, fill= Z)) + geom_tile() + 
+data <- expand.grid(X=1:ncol(sim_data$y), Y=1:4)
+data$proportion <- as.vector(phi)
+
+ggplot(data, aes(X, Y, fill= proportion)) + geom_tile() + 
   scale_fill_gradient(low="green", high="darkblue",na.value="green") +
-  labs(x = "Category distribution (%)") + labs(y = "Cluster") +
+  labs(x = "Category distribution") + labs(y = "Cluster") +
   labs(fill = " ")+theme_minimal()+
   ggtitle("Estimated Phi matrix") 
 ```
 
-
-In some cases (as for instance in text analysis), it may be useful  to know the main cluster categories (or main words for each topic). We define a category to be relevant for a given cluster if it appears at least twice more in this cluster than in any other cluster. This can be done as follows:
+In many situations, it may be useful  to identify the main cluster categories (i.e., main words for each topic or the main species in each community). We define a category to be relevant for a given cluster if it appears at least twice more frequently in the focus cluster than in any other cluster. We use the following code to help us in this task:
 
 ```{r}
-phi=matrix(colMeans(lda_with_covariates$phi[seq,]),nrow=4,ncol=ncol(sim_data$y))
 phi.max=matrix(NA,nrow=4,ncol=ncol(sim_data$y))
 for (i in 1:4){phi.max[i,]=apply(phi[-i,], 2, max)}
-colnames(phi.max)=1:ncol(sim_data$y)
-topic_word_max=apply(phi/phi.max, 1, function(x) names(sort(x,decreasing=TRUE)))
-colnames(topic_word_max)=c("Cluster 1","Cluster 2","Cluster 3","Cluster 4")
+results=phi/phi.max
+colnames(results)=colnames(phi)
+rownames(results)=rownames(phi)
+head(round(results[,1:10],2))
 ```
 
+For example, these results suggest that "Category 1" is 88 times more common in "Cluster 2" than in any other cluster. Similarly, "Category 2" is 35 times more common in "Cluster 4" than in any other cluster. We use the following code to identify the main cluster categories:
 
-
-```{r echo = FALSE, results = 'asis'}
-library(knitr)
-kable(topic_word_max[1:10, ])
+```{r}
+max_categ_cluster=apply(phi/phi.max, 1, function(x) names(sort(x,decreasing=TRUE)))
+head(max_categ_cluster)
 ```
 
+Finally, the posterior mean of the regression coefficients are extracted in the following way:
 
-The coefficients of the regression can be extracted using
+```{r}
+tmp=colMeans(lda_with_covariates$betas[seq1,])
+betas=matrix(tmp,ncol=4)
+colnames(betas)=paste0('Cluster',1:4)
+rownames(betas)=paste0('Coefficients',1:nrow(betas))
+head(round(betas,3))
+```
+We can also examine the posterior distribution of the regression coefficients in the following way:
 
 ```{r}
 library(reshape2)
 library(ggridges)
-
-number <- 1:length(seq)
-aux1 <- data.frame(number,lda_with_covariates$betas[seq,])
+number <- 1:length(seq1)
+aux1 <- data.frame(number,lda_with_covariates$betas[seq1,])
 aux2 <- melt(aux1, id=c("number"))
 aux2$variable <- (gsub("X", "", aux2$variable))
 ```
