@@ -23,7 +23,6 @@ text-align: justify}
 ldacov (@shimizu2020ldacov) is an R package that estimates the Latent Dirichlet Allocation (LDA) model with covariates using an MCMC algorithm. The model implemented in this package uses the number of elements in each cluster as the response variable. The logarithmic link function used to relate covariates to the response variable allows an easy interpretation of the regression coefficients.
 
 
-
 ## Installation
 Use the devtools package to install ldacov directly from github.
 ```
@@ -53,7 +52,6 @@ We start by finding the optimal number of clusters. Although this quantity could
 * `nburn`:  number of iterations to be discarded as burn-in;
 * `psi`: parameter for the prior Dirichlet distribution used for $\phi_k$ (the vector of probabilities that characterizes each cluster); and
 * `gamma`: parameter for the TSB prior used for $\theta_l$ (the vector of probabilities that characterizes each unit).
-
 
 ```{r echo=T, results='hide'}
 set.seed(1)
@@ -96,11 +94,11 @@ cumsum1[1:4]
 ```
 
 ## Estimation
+
 Once the number of clusters has been defined, the estimation of the parameters of ldacov are made through the function `gibbs.LDA.cov`. The arguments required by this function are:
 
 * `ncomm`:  number of clusters;
 * `ngibbs`:  number of iterations for the Gibbs sampler;
-* `nburn`:  number of iterations to be discarded as burn-in;
 * `y`:  counting matrix containing the data (rows are units and columns are categories); 
 * `xmat`: matrix containing covariate information (rows are units and each column contains a different covariate). Notice that the first column of this matrix should be comprised of 1's if the regression model is to have an intercept;  
 * `phi.prior`: parameter to be used in the Dirichlet prior for $\Phi$ if this matrix is estimated;
@@ -110,10 +108,8 @@ Once the number of clusters has been defined, the estimation of the parameters o
 * `estimate.phi`: if $\Phi$ matrix is supposed to be estimated (TRUE or FALSE).
 
 ```{r echo=T, results='hide'}
-
 lda_with_covariates <- gibbs.LDA.cov(ncomm=4,
                                      ngibbs=1000,
-                                     nburn=500,
                                      y=sim_data$y,
                                      xmat=sim_data$xmat,
                                      phi.prior=0.01,
@@ -146,7 +142,6 @@ Typically, the main goals of the ldacov  model are:
 (iii) and understand the distribution of the clusters within each unit (matrix $\Theta$). 
 
 We start by examining $\Theta$. We obtain the posterior mean for this matrix in the following way:
-
 ```{r}
 seq1=100:1000
 tmp=matrix(colMeans(lda_with_covariates$nlk[seq1,]),nrow=nrow(sim_data$y),ncol=4)
@@ -171,7 +166,6 @@ ggplot(data, aes(X, Y, fill= proportion)) + geom_tile() +
 ```
 
 Similarly, we can also examine the $\Phi$ matrix. We calculate the posterior mean in the following way:
-
 
 ```{r}
 phi <- matrix(colMeans(lda_with_covariates$phi[seq1,]),nrow=4,ncol=ncol(sim_data$y))
@@ -242,6 +236,5 @@ ggplot(aux2, aes(x = value, y = variable, fill = variable)) +
         axis.ticks.y=element_blank(),
         axis.title.x=element_blank())
 ```
-
 
 ## References

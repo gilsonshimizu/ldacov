@@ -402,7 +402,6 @@ text-align: justify}
 <ul>
 <li><code>ncomm</code>: number of clusters;</li>
 <li><code>ngibbs</code>: number of iterations for the Gibbs sampler;</li>
-<li><code>nburn</code>: number of iterations to be discarded as burn-in;</li>
 <li><code>y</code>: counting matrix containing the data (rows are units and columns are categories);</li>
 <li><code>xmat</code>: matrix containing covariate information (rows are units and each column contains a different covariate). Notice that the first column of this matrix should be comprised of 1’s if the regression model is to have an intercept;<br />
 </li>
@@ -412,17 +411,15 @@ text-align: justify}
 <li><code>phi.init</code>: posterior samples from the <span class="math inline">\(\Phi\)</span> matrix estimated by “gibbs.lda”. If <code>estimate.phi</code> is TRUE, then these posterior samples are used simply to initialize the <span class="math inline">\(\Phi\)</span> matrix. If <code>estimate.phi</code> is FALSE, then these posterior samples are used instead of attempting to re-estimate the <span class="math inline">\(\Phi\)</span> matrix; and</li>
 <li><code>estimate.phi</code>: if <span class="math inline">\(\Phi\)</span> matrix is supposed to be estimated (TRUE or FALSE).</li>
 </ul>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a></span>
-<span id="cb8-2"><a href="#cb8-2"></a>lda_with_covariates &lt;-<span class="st"> </span><span class="kw">gibbs.LDA.cov</span>(<span class="dt">ncomm=</span><span class="dv">4</span>,</span>
-<span id="cb8-3"><a href="#cb8-3"></a>                                     <span class="dt">ngibbs=</span><span class="dv">1000</span>,</span>
-<span id="cb8-4"><a href="#cb8-4"></a>                                     <span class="dt">nburn=</span><span class="dv">500</span>,</span>
-<span id="cb8-5"><a href="#cb8-5"></a>                                     <span class="dt">y=</span>sim_data<span class="op">$</span>y,</span>
-<span id="cb8-6"><a href="#cb8-6"></a>                                     <span class="dt">xmat=</span>sim_data<span class="op">$</span>xmat,</span>
-<span id="cb8-7"><a href="#cb8-7"></a>                                     <span class="dt">phi.prior=</span><span class="fl">0.01</span>,</span>
-<span id="cb8-8"><a href="#cb8-8"></a>                                     <span class="dt">array.lsk.init=</span>lda_no_covariates<span class="op">$</span>array.lsk,</span>
-<span id="cb8-9"><a href="#cb8-9"></a>                                     <span class="dt">var.betas=</span><span class="kw">rep</span>(<span class="dv">100</span>,<span class="kw">ncol</span>(sim_data<span class="op">$</span>xmat)),</span>
-<span id="cb8-10"><a href="#cb8-10"></a>                                     <span class="dt">phi.init=</span>lda_no_covariates<span class="op">$</span>phi,</span>
-<span id="cb8-11"><a href="#cb8-11"></a>                                     <span class="dt">estimate.phi=</span><span class="ot">FALSE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>lda_with_covariates &lt;-<span class="st"> </span><span class="kw">gibbs.LDA.cov</span>(<span class="dt">ncomm=</span><span class="dv">4</span>,</span>
+<span id="cb8-2"><a href="#cb8-2"></a>                                     <span class="dt">ngibbs=</span><span class="dv">1000</span>,</span>
+<span id="cb8-3"><a href="#cb8-3"></a>                                     <span class="dt">y=</span>sim_data<span class="op">$</span>y,</span>
+<span id="cb8-4"><a href="#cb8-4"></a>                                     <span class="dt">xmat=</span>sim_data<span class="op">$</span>xmat,</span>
+<span id="cb8-5"><a href="#cb8-5"></a>                                     <span class="dt">phi.prior=</span><span class="fl">0.01</span>,</span>
+<span id="cb8-6"><a href="#cb8-6"></a>                                     <span class="dt">array.lsk.init=</span>lda_no_covariates<span class="op">$</span>array.lsk,</span>
+<span id="cb8-7"><a href="#cb8-7"></a>                                     <span class="dt">var.betas=</span><span class="kw">rep</span>(<span class="dv">100</span>,<span class="kw">ncol</span>(sim_data<span class="op">$</span>xmat)),</span>
+<span id="cb8-8"><a href="#cb8-8"></a>                                     <span class="dt">phi.init=</span>lda_no_covariates<span class="op">$</span>phi,</span>
+<span id="cb8-9"><a href="#cb8-9"></a>                                     <span class="dt">estimate.phi=</span><span class="ot">FALSE</span>)</span></code></pre></div>
 <p>This function outputs a list which contains the following elements:</p>
 <ul>
 <li><code>llk</code>: posterior samples for the log-likelihood;<br />
